@@ -37,14 +37,14 @@ else:
 
 
 setup(
-    name="tabulate",
+    name="tabulate-expwidth",
     version="0.8.10",
     description="Pretty-print tabular data",
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
-    author="Sergey Astanin",
-    author_email="s.astanin@gmail.com",
-    url="https://github.com/astanin/python-tabulate",
+    author="M. Huang (Orig. Sergey Astanin)",
+    author_email="mhuang001@gitub.com",
+    url="https://github.com/mhuang001/python-tabulate.git@r1",
     license="MIT",
     classifiers=[
         "Development Status :: 4 - Beta",
