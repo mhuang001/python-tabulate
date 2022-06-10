@@ -1,3 +1,5 @@
+This Pypi package is made so that packages depending oon this fork of ``python-tabulate`` can also go on Pypi. Or I get `` Error: Can't have direct dependency: 'tabulate @ git+https://github.com...``
+
 python-tabulate
 ===============
 
