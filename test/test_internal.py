@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
 """Tests of the internal tabulate functions."""
 
-from __future__ import print_function
-from __future__ import unicode_literals
 import tabulate as T
-from common import assert_equal, skip
+
+from common import assert_equal, skip, rows_to_pipe_table_str, cols_to_pipe_str
 
 
 def test_multiline_width():
@@ -31,6 +28,36 @@ def test_align_column_decimal():
     assert_equal(output, expected)
 
 
+def test_align_column_decimal_with_thousand_separators():
+    "Internal: _align_column(..., 'decimal')"
+    column = ["12.345", "-1234.5", "1.23", "1,234.5", "1e+234", "1.0e234"]
+    output = T._align_column(column, "decimal")
+    expected = [
+        "   12.345  ",
+        "-1234.5    ",
+        "    1.23   ",
+        "1,234.5    ",
+        "    1e+234 ",
+        "    1.0e234",
+    ]
+    assert_equal(output, expected)
+
+
+def test_align_column_decimal_with_incorrect_thousand_separators():
+    "Internal: _align_column(..., 'decimal')"
+    column = ["12.345", "-1234.5", "1.23", "12,34.5", "1e+234", "1.0e234"]
+    output = T._align_column(column, "decimal")
+    expected = [
+        "     12.345  ",
+        "  -1234.5    ",
+        "      1.23   ",
+        "12,34.5      ",
+        "      1e+234 ",
+        "      1.0e234",
+    ]
+    assert_equal(output, expected)
+
+
 def test_align_column_none():
     "Internal: _align_column(..., None)"
     column = ["123.4", "56.7890"]
@@ -45,6 +72,79 @@ def test_align_column_multiline():
     output = T._align_column(column, "center", is_multiline=True)
     expected = ["  1  ", " 123 ", "12345" + "\n" + "  6  "]
     assert_equal(output, expected)
+
+
+def test_align_cell_veritically_one_line_only():
+    "Internal: Aligning a single height cell is same regardless of alignment value"
+    lines = ["one line"]
+    column_width = 8
+
+    top = T._align_cell_veritically(lines, 1, column_width, "top")
+    center = T._align_cell_veritically(lines, 1, column_width, "center")
+    bottom = T._align_cell_veritically(lines, 1, column_width, "bottom")
+    none = T._align_cell_veritically(lines, 1, column_width, None)
+
+    expected = ["one line"]
+    assert top == center == bottom == none == expected
+
+
+def test_align_cell_veritically_top_single_text_multiple_pad():
+    "Internal: Align single cell text to top"
+    result = T._align_cell_veritically(["one line"], 3, 8, "top")
+
+    expected = ["one line", "        ", "        "]
+
+    assert_equal(expected, result)
+
+
+def test_align_cell_veritically_center_single_text_multiple_pad():
+    "Internal: Align single cell text to center"
+    result = T._align_cell_veritically(["one line"], 3, 8, "center")
+
+    expected = ["        ", "one line", "        "]
+
+    assert_equal(expected, result)
+
+
+def test_align_cell_veritically_bottom_single_text_multiple_pad():
+    "Internal: Align single cell text to bottom"
+    result = T._align_cell_veritically(["one line"], 3, 8, "bottom")
+
+    expected = ["        ", "        ", "one line"]
+
+    assert_equal(expected, result)
+
+
+def test_align_cell_veritically_top_multi_text_multiple_pad():
+    "Internal: Align multiline celltext text to top"
+    text = ["just", "one ", "cell"]
+    result = T._align_cell_veritically(text, 6, 4, "top")
+
+    expected = ["just", "one ", "cell", "    ", "    ", "    "]
+
+    assert_equal(expected, result)
+
+
+def test_align_cell_veritically_center_multi_text_multiple_pad():
+    "Internal: Align multiline celltext text to center"
+    text = ["just", "one ", "cell"]
+    result = T._align_cell_veritically(text, 6, 4, "center")
+
+    # Even number of rows, can't perfectly center, but we pad less
+    # at top when required to do make a judgement
+    expected = ["    ", "just", "one ", "cell", "    ", "    "]
+
+    assert_equal(expected, result)
+
+
+def test_align_cell_veritically_bottom_multi_text_multiple_pad():
+    "Internal: Align multiline celltext text to bottom"
+    text = ["just", "one ", "cell"]
+    result = T._align_cell_veritically(text, 6, 4, "bottom")
+
+    expected = ["    ", "    ", "    ", "just", "one ", "cell"]
+
+    assert_equal(expected, result)
 
 
 def test_wrap_text_to_colwidths():
@@ -209,3 +309,37 @@ def test_wrap_text_to_colwidths_multi_ansi_colors_in_subset():
         ]
     ]
     assert_equal(expected, result)
+
+
+def test__remove_separating_lines():
+    with_rows = [
+        [0, "a"],
+        [1, "b"],
+        T.SEPARATING_LINE,
+        [2, "c"],
+        T.SEPARATING_LINE,
+        [3, "c"],
+        T.SEPARATING_LINE,
+    ]
+    result, sep_lines = T._remove_separating_lines(with_rows)
+    expected = rows_to_pipe_table_str([[0, "a"], [1, "b"], [2, "c"], [3, "c"]])
+
+    assert_equal(expected, rows_to_pipe_table_str(result))
+    assert_equal("2|4|6", cols_to_pipe_str(sep_lines))
+
+
+def test__reinsert_separating_lines():
+    with_rows = [
+        [0, "a"],
+        [1, "b"],
+        T.SEPARATING_LINE,
+        [2, "c"],
+        T.SEPARATING_LINE,
+        [3, "c"],
+        T.SEPARATING_LINE,
+    ]
+    sans_rows, sep_lines = T._remove_separating_lines(with_rows)
+    T._reinsert_separating_lines(sans_rows, sep_lines)
+    expected = rows_to_pipe_table_str(with_rows)
+
+    assert_equal(expected, rows_to_pipe_table_str(sans_rows))
